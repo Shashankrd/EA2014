@@ -1,0 +1,262 @@
+__author__ = 'priyanksanghavi'
+
+import numpy as np
+import time
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+
+
+
+#numpy array
+# 20! = 2.432902e+18
+
+sample_space_size = 100000
+pop_size = 100
+np.random.seed(12345)
+numberOfNodes = 20
+source = 0
+destination = 0
+k = 0
+final_length = 0
+temp_population = [[0 for x in range(numberOfNodes)]for y in range(sample_space_size)]
+population = [[0 for x in range(numberOfNodes)]for y in range(pop_size)]
+offspring = [[0 for x in range(numberOfNodes)]for y in range(5*pop_size)]
+
+sample_fitness = [0 for x in range(sample_space_size)]
+fitness = [0 for x in range(5*pop_size)]
+
+plot1 = []
+plot2 = []
+plot3 = []
+
+weights = [[x for x in range(numberOfNodes)]for y in range(numberOfNodes)]
+weights = [[1000, 50, 65, 45, 30, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [50, 1000, 60, 1000, 1000, 62, 27, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [65, 60, 1000, 43, 1000, 1000, 250, 35, 29, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [45, 1000, 43, 1000, 90, 1000, 1000, 1000, 17, 40, 15, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [30, 1000, 1000, 90, 1000, 1000, 1000, 1000, 1000, 1000, 230, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [1000, 62, 1000, 1000, 1000, 1000, 25, 1000, 1000, 1000, 1000, 136, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [1000, 27, 250, 1000, 1000, 25, 1000, 32, 30, 1000, 1000, 58, 220, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+           [1000, 1000, 35, 1000, 1000, 1000, 32, 1000, 120, 1000, 1000, 61, 88, 20, 1000, 1000, 1000, 1000, 1000, 1000],
+           [1000, 1000, 29, 17, 1000, 1000, 30, 120, 1000, 61, 1000, 1000, 1000, 150, 60, 1000, 1000, 1000, 1000, 1000],
+           [1000, 1000, 1000, 40, 1000, 1000, 1000, 1000, 61, 1000, 32, 1000, 1000, 1000, 194, 147, 1000, 1000, 110, 1000],
+           [1000, 1000, 1000, 15, 230, 1000, 1000, 1000, 1000, 32, 1000, 1000, 1000, 1000, 1000, 130, 1000, 1000, 1000, 1000],
+           [1000, 1000, 1000, 1000, 1000, 136, 58, 61, 1000, 1000, 1000, 1000, 144, 1000, 1000, 1000, 161, 1000, 1000, 1000],
+           [1000, 1000, 1000, 1000, 1000, 1000, 220, 88, 1000, 1000, 1000, 144, 1000, 24, 1000, 1000, 71, 54, 1000, 1000],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 20, 150, 1000, 1000, 1000, 24, 1000, 40, 1000, 1000, 72, 1000, 22],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 60, 194, 1000, 1000, 1000, 40, 1000, 77, 1000, 1000, 14, 220],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 147, 130, 1000, 1000, 1000, 77, 1000, 1000, 1000, 89, 1000],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 161, 71, 1000, 1000, 1000, 1000, 26, 1000, 1000],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 54, 72, 1000, 1000, 26, 1000, 1000, 16],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 110, 1000, 1000, 1000, 1000, 14, 89, 1000, 1000, 1000, 72],
+           [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 22, 220, 1000, 1000, 16, 72, 1000]]
+
+
+def init_temp_population():
+    #generate population with fitness less than 1000
+    #generates numbers for numbers more than length
+    #print 'In INIT'
+    global final_length
+    global plot1
+    global plot2
+    global plot3
+
+
+    for i in range(0, sample_space_size):
+        length = np.random.randint(1, 20)
+        #print length
+        temp_population[i][0] = source
+        temp_population[i][length] = destination
+        for j in range(1, length):
+            temp_population[i][j] = np.random.randint(0, 20)
+            while temp_population[i][j] == source or temp_population[i][j] == destination:
+                temp_population[i][j] = np.random.randint(0, 20)
+
+        for j in range(length+1, numberOfNodes):
+            temp_population[i][j] = 0
+
+    #find sample_fitness of initial population
+    for i in range(0, sample_space_size):
+        sample_fitness[i] = 0
+        j = 0
+        while temp_population[i][j] != destination:
+            temp = temp_population[i][j]
+            temp1 = temp_population[i][j+1]
+            sample_fitness[i] += weights[temp-1][temp1-1]
+            j += 1
+            del temp
+            del temp1
+
+    #select best below 1000 fitness
+    j = 0
+    for i in range(sample_space_size):
+        if sample_fitness[i] < 1000:
+            population[j] = temp_population[i]
+            fitness[j] = sample_fitness[i]
+
+            hops = 0
+            i = 0
+            while population[j][i] != destination:
+                hops += 1
+                i += 1
+
+            plot1.append(fitness[j])
+            plot2.append(hops)
+            plot3.append(int((fitness[i]*0.8) + (hops-1)*0.2))
+
+            if j == pop_size-1:
+                break
+            #print str(population[j]) + ' -- '+ str(fitness[j])
+
+            j += 1
+
+    final_length = j
+    #print  'Final Length from '+ str(source) +' to ' + str(destination) + ' is   ' + str(final_length)
+
+
+
+
+    #print 'Exiting INIT'
+
+
+def pop_crossover():
+
+    #print 'In Crossover'
+    global k
+    global final_length
+
+    for l in range(final_length):
+        k = 0
+        parent1 = np.random.randint(0,final_length)
+        parent2 = np.random.randint(0,final_length)
+        while parent1 == parent2:
+            parent2 = np.random.randint(0, final_length)
+        #print 'Parent1 -- ' + str(parent1) + ' Parent2 -- ' + str(parent2)
+
+        i = 0
+        j = 0
+        offspring[l*4] = population[parent1]
+        offspring[l*4+1] = population[parent2]
+
+        while population[parent1][i] != destination:
+            while population[parent2][j] != destination:
+                if population[parent1][i] == population[parent2][j]:
+                    #do crossover and break with k=1
+                    temp1 = population[parent1][i:]
+                    temp2 = population[parent2][j:]
+
+                    offspring[l*4+2] = population[parent1][0:i] + temp2
+                    offspring[l*4+3] = population[parent2][0:j] + temp1
+
+                    #print offspring[l]
+                    #print offspring[l+1]
+                    #print offspring[l+2]
+                    #print offspring[l+3]
+                    #print '\n'
+                    k = 1
+                    break
+                else:
+                    j += 1
+            if k == 1:
+                break
+            i += 1
+            j = 0
+    #print 'Exiting crossover'
+
+
+def pop_fitness():
+
+    #print 'In Fitness'
+    global final_length
+
+
+    for i in range(5*pop_size):
+        if offspring[i][0] != 0:
+            fitness[i] = 0
+            j = 0
+            #print offspring[i]
+            while offspring[i][j] != destination and j != 19:
+                temp = offspring[i][j]
+                #print temp
+                temp1 = offspring[i][j+1]
+                #print j+1
+                fitness[i] += weights[temp-1][temp1-1]
+                j += 1
+                del temp
+                del temp1
+            #print fitness[i]
+    #print 'Exiting fitness'
+
+def selection():
+    #sort and take individuals with least cost
+    #print 'In Selection'
+    global final_length
+    for i in range(2*final_length):
+        for j in range(2*final_length - i - 1):
+            if fitness[j] > fitness[j+1] != 0 and fitness[j] != 0:
+                temp = fitness[j]
+                fitness[j] = fitness[j+1]
+                fitness[j+1] = temp
+
+                temp1 = offspring[j]
+                offspring[j] = offspring[j+1]
+                offspring[j+1] = temp1
+
+    for i in range(final_length):
+        population[i] = offspring[i]
+
+        #print fitness[i]
+        #print population[i]
+    #print 'Exiting Selection'
+
+
+def main():
+    global source
+    global destination
+
+    for i in range(numberOfNodes):
+        for j in range(i, numberOfNodes):
+            if i != j:
+                source = i+1
+                destination = j+1
+
+                generations = 2
+                init_temp_population()
+                while generations != 0:
+
+                    pop_crossover()
+                    pop_fitness()
+                    selection()
+                    generations -= 1
+                #print 'Path from '+ str(source) +' to ' + str(destination) + ' is '
+                #print str(population[1]) + ' -- ' + str(fitness[1])
+    p1 = np.asarray(plot1)
+    p2 = np.asarray(plot2)
+    p3 = np.asarray(plot3)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    surf = ax.scatter(p1, p2, p3)
+    ax.set_xlim(0, 400)
+    ax.set_ylim(0, 20)
+    ax.set_zlim(0, 500)
+    ax.set_xlabel('Weights')
+    ax.set_ylabel('Hops')
+    ax.set_zlabel('Fitness = 0.8*weights + 0.2*hops')
+
+    plt.show()
+
+    # fig1 = plt.figure()
+    # ay = fig1.add_subplot(111, projection='3d')
+    # 
+    # surf1 = ay.plot_surface(p1, p2, p3)
+    # #plt.show()
+    # #print plot1
+    # #print plot2
+    # #print plot3
+
+if __name__ == "__main__":
+    start_time = time.time()
+    main()
+    #print '--- seconds ---' + str(time.time() - start_time)
