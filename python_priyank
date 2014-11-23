@@ -1,111 +1,80 @@
 from __future__ import division
-# large network -- plot for best fitness
+
 __author__ = 'priyanksanghavi'
 
-# change initial population -- links... only nodes nearby can have link
-
+# with sus_parent
 
 import numpy as np
-import csv
+# import csv
 import matplotlib.pyplot as plt
 
-np.random.seed(1234)
-
+# np.random.seed(1234)
+count = 100
 numberOfNodes = 5000
-sample_space_size = 100
-pop_size = 100
+sample_space_size = 250
+pop_size = 25
 generations = 0
 gen = []
+k = 0
 
-source = 2354
-destination = 1768
+source = 2511
+destination = 4427
 
 p = 0
 pc = 0.9
 pm = 0.1
 
-length = 100
-offspring_final_length = 3*pop_size
+length = 20
+offspring_final_length = 300
 sample_fitness = [0 for x in range(sample_space_size)]
-fitness = [0 for x in range(3*pop_size)]
+fitness = [0 for x in range(pop_size)]
 temp_population = [[0 for x in range(length)] for y in range(sample_space_size)]
 population = [[0 for x in range(length)] for y in range(pop_size)]
 offspring = [[0 for x in range(length)]for y in range(3*pop_size)]
-offspring_fitness = [[0 for x in range(length)]for y in range(3*pop_size)]
+offspring_fitness = [0 for x in range(3*pop_size)]
 fitness_with_nodes = [0 for x in range(5*pop_size)]
-final_fitness = [0 for x in range(3*pop_size)]
-best_fitness = [0 for x in range(100)]
-mean_fitness = [0 for x in range(100)]
+final_fitness = [0 for x in range(5*pop_size)]
+best_fitness = [0 for x in range(count)]
+mean_fitness = [0 for x in range(count)]
+best = [0 for x in range(length)]
+sus = [0 for x in range(pop_size)]
 
-
+fit_best = 1000
 # weights = [[x for x in range(numberOfNodes)] for y in range(numberOfNodes)]
-weights = [[0 for x in range(numberOfNodes)] for y in range(numberOfNodes)]
+weights = np.random.randint(50, 500, size=(numberOfNodes, numberOfNodes))
 
-for i in range(numberOfNodes):
-    weights[i][i] = np.random.randint(50, 1000)
-
-    for j in range(0,i):
-            weights[i][j] = np.random.randint(50,1000)
-            weights[j][i] = weights[i][j]
-
-
-
-
-# ifile  = open('p2p-Gnutella08.csv', "rb")
-# reader = csv.reader(ifile)
-#
-# data = [[eval(row[0]), eval(row[1])] for row in reader]
-
-# data = np.genfromtxt("p2p-Gnutella08.csv",delimiter=",")
-
-# print data[0][1]
-# print data[1][0]
-
-# #
+# links = np.random.randint(0, 2, size=(numberOfNodes, numberOfNodes))
 links = [[0 for x in range(numberOfNodes)] for y in range(numberOfNodes)]
-
-# for i in range(len(data)):
-#     links[data[i][0]-1][data[i][1]-1] = 1
-#     links[data[i][1]-1][data[i][0]-1] = 1
-#
-# links = np.random.randint(0, 2, size = (numberOfNodes, numberOfNodes))
-#
 for i in range(numberOfNodes):
-    for j in range(numberOfNodes):
-        if weights[i][j] <= 200:
+    for j in range(numberOfNodes-i):
+        if weights[i][j] < 200:
             links[i][j] = 1
             links[j][i] = 1
-# print links[source-1][destination-1]
-# print weights[source-1][destination-1]
 
 def init_population():
     global population
-    global fitness
+    global fitness, k
 
     #generate population of length 1000
     for i in range(0, sample_space_size):
         # print 'hi'
-        # while temp_population[i][length-1] != destination or temp_population[i][length-1] != 0:
+        k = 0
+        while k == 0:
             k = 0
             temp_population[i][0] = source
             for j in range(1, length):
                 if k == 0:
-                    # if temp_population[i][j-1]-1 >= sample_space_size or destination-1 >= length:
-                    #     print 'welcome'
-                    #     print temp_population[i][j-1]-1
-                    #     print destination-1
                     if links[temp_population[i][j-1]-1][destination-1] == 1:
                         temp_population[i][j] = destination
                         k = 1
                     else:
-                        temp_population[i][j] = np.random.randint(1, (numberOfNodes+1))
+                        temp_population[i][j] = np.random.randint(1, (numberOfNodes+1) )
                         while temp_population[i][j] == source or links[temp_population[i][j - 1] - 1][temp_population[i][j] - 1] == 0:
-                            temp_population[i][j] = np.random.randint(1, (numberOfNodes+1))
+                            temp_population[i][j] = np.random.randint(1, (numberOfNodes+1) )
 
                 else:
                     temp_population[i][j] = 0
-
-            # print temp_population[i]
+        # print temp_population[i]
 
     population = temp_population
     fitness = sample_fitness
@@ -138,7 +107,6 @@ def init_population():
     for i in range(0, pop_size):
         sample_fitness[i] = 0
         j = 0
-        print population[i]
         while population[i][j] != destination and j!=length:
             temp = population[i][j]
             temp1 = population[i][j + 1]
@@ -149,6 +117,16 @@ def init_population():
         # print str(i) + ' ' + str(population[i])
         # print fitness[i]
 
+    for i in range(pop_size):
+        for j in range(pop_size - i - 1):
+            if fitness[j] >= fitness[j+1]:
+                temp = fitness[j]
+                fitness[j] = fitness[j+1]
+                fitness[j+1] = temp
+
+                temp1 = population[j]
+                population[j] = population[j+1]
+                population[j+1] = temp1
 
 
 def crossover():
@@ -160,8 +138,46 @@ def crossover():
     global offspring_final_length
     global offspring
     global p
-
+    tempfitness = [0 for f in range(pop_size)]
     p = 0
+
+    # print ' in Crossover'
+    totalfitness = 0
+    for z in range(pop_size):
+        totalfitness += fitness[z]
+        tempfitness[z] = 2000 - fitness[z]
+
+    for a in range(pop_size):
+        for b in range(pop_size - a - 1):
+            if tempfitness[b] < tempfitness[b+1]:
+                temp = tempfitness[b]
+                tempfitness[b] = tempfitness[b+1]
+                tempfitness[b+1] = temp
+
+                temp1 = population[b]
+                population[b] = population[b+1]
+                population[b+1] = temp1
+
+    sum_sus =  [0 for f in range(pop_size+1)]
+    sum_sus[0] = 0
+    sum_sus[pop_size] = 1
+    for c in range(1, pop_size):
+        sum_sus[c] = float(tempfitness[c]/totalfitness)
+        sum_sus[c] += sum_sus[c-1]
+
+    sus_pop = [0 for f in range(pop_size)]
+
+    for d in range(pop_size):
+        pointer = 1/pop_size
+
+        for e in range(pop_size):
+            if sum_sus[e] < pointer < sum_sus[e+1]:
+                sus_pop[d] = population[e]
+                break
+            pointer += (1/pop_size)
+
+    population = sus_pop
+
     for l in range(pop_size):
         prob = np.random.uniform(0.0, 1.0)
         if prob < pc:
@@ -180,7 +196,7 @@ def crossover():
             while population[parent1][i] != destination:
                 while population[parent2][j] != destination:
                     if population[parent1][i] == population[parent2][j] and population[parent1][i] != source:
-                        #do crossover and break with k=1
+                        # do crossover and break with k=1
                         temp1 = population[parent1][i:]
                         temp2 = population[parent2][j:]
                         # print 'temp1 = ' + str(temp1)
@@ -198,6 +214,8 @@ def crossover():
                     break
                 i += 1
                 j = 0
+        # print offspring[l]
+
     # print 'p is ' + str(p)
     for q in range(pop_size):
         offspring[p+q] = population[q]
@@ -231,7 +249,6 @@ def mutation():
                 # print j
             if temp == 2:
                 continue
-
 
             temp1 = np.random.randint(1, temp-1)
             value = offspring[i][temp1]
@@ -277,6 +294,7 @@ def mutation():
                 # print offspring[i]
             # print '\n'
 
+
 def pop_fitness():
     global offspring_final_length
     global fitness_with_nodes
@@ -303,7 +321,6 @@ def selection():
     global best_fitness
     global generations
 
-    #sort ascending
     for i in range(offspring_final_length):
         for j in range(offspring_final_length - i - 1):
             if offspring_fitness[j] > offspring_fitness[j+1] != 0:# and fitness[j] != 0:
@@ -319,7 +336,6 @@ def selection():
         # temp = np.random.randint(0, offspring_final_length)
         population[i] = offspring[i]
         fitness[i] = offspring_fitness[i]
-    # mean_fitness[generations] = np.mean(fitness)
 
     for i in range(pop_size):
         for j in range(pop_size - i - 1):
@@ -333,37 +349,26 @@ def selection():
                 population[j+1] = temp1
 
     best_fitness[generations] = fitness[1]
-    print fitness[1]
-    # print 'Best is  ' + str(population[1]) + ' -- >  ' + str(fitness[1])
+    # mean_fitness[generations] = np.mean(fitness)
+    print 'Best is  ' + str(population[1]) + ' -- >  ' + str(fitness[1])
     # print str(population[2]) + '-- > ' + str(fitness[2])
 
 
 def main():
-    global generations
-    global source
-    global destination
-
-    # for i in range(10):
-    #
-    #     source = np.random.randint(numberOfNodes)
-    #     print source
-    #     destination = np.random.randint(numberOfNodes)
-    #     print destination
     init_population()
+    global generations
 
-    while generations != 100:
+    while generations != count:
         crossover()
         mutation()
         pop_fitness()
         selection()
         gen.append(generations)
         generations += 1
-    print population[1]
-    # print links[source-1][destination-1]
-    # print weights[source-1][destination-1]
-    print '\n\n\n'
-    plt.plot(np.array(gen[:generations]), np.array(best_fitness[:generations]),label='Best Fitness')
-    plt.plot(np.array(gen[:generations]), np.array(mean_fitness[:generations]),label='Mean Fitness')
+
+    plt.plot(np.array(gen[:generations]), np.array(best_fitness[:generations]), label='Best Fitness')
+    # plt.plot(np.array(gen[:generations]), np.array(mean_fitness[:generations]),label='Mean Fitness')
+
     plt.show()
 
 
