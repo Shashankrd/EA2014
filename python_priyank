@@ -2,43 +2,45 @@ from __future__ import division
 
 __author__ = 'priyanksanghavi'
 
-# change initial population -- links... only nodes nearby can have link
-
 
 import numpy as np
-# import csv
 import matplotlib.pyplot as plt
+import time
 
-# np.random.seed(1233)
-count = 5000
-numberOfNodes = 5000
-sample_space_size = 500
-pop_size = 25
+
+np.random.seed(1234)
+count = 300
+numberOfNodes = 500
+sample_space_size = 50
+pop_size = 20
 generations = 0
 gen = []
 k = 0
-# 2511  4447
-source = 989
-destination = 4338
+runs = 20
+run = []
+source = 122
+destination = 429
 
 p = 0
 pc = 0.8
 pm = 0.01
 
 length = 20
-offspring_final_length = 300
+offspring_final_length = 500
 sample_fitness = [0 for x in range(sample_space_size)]
 fitness = [0 for x in range(pop_size)]
 temp_population = [[0 for x in range(length)] for y in range(sample_space_size)]
 population = [[0 for x in range(length)] for y in range(pop_size)]
 offspring = [[0 for x in range(length)] for y in range(3 * pop_size)]
 offspring_fitness = [0 for x in range(3 * pop_size)]
-fitness_with_nodes = [0 for x in range(5 * pop_size)]
-final_fitness = [0 for x in range(5 * pop_size)]
+final_fitness = [0 for x in range(3 * pop_size)]
 best_fitness = [0 for x in range(count)]
 mean_fitness = [0 for x in range(count)]
 best = [0 for x in range(length)]
 sus = [0 for x in range(pop_size)]
+allpathmin = [0 for x in range(count)]
+minpathrun = [0 for x in range(runs)]
+minpathrunall = [0 for x in range(runs)]
 
 
 # for all paths
@@ -47,25 +49,34 @@ all_paths = [[0 for x in range(length)] for y in range(allspace)]
 allfitness = [1000 for x in range(allspace)]
 
 fit_best = 1000
-# weights = [[x for x in range(numberOfNodes)] for y in range(numberOfNodes)]
 weights = np.random.randint(50, 500, size=(numberOfNodes, numberOfNodes))
 
-# links = np.random.randint(0, 2, size=(numberOfNodes, numberOfNodes))
 links = [[0 for x in range(numberOfNodes)] for y in range(numberOfNodes)]
 for q in range(numberOfNodes):
     for r in range(numberOfNodes - q):
-        if weights[q][r] < 200:
+        if weights[q][r] < 200 and q != r:
             links[q][r] = 1
             links[r][q] = 1
+
+
+# def popinit():
+#     global weights, links
+#     weights = np.random.randint(50, 500, size=(numberOfNodes, numberOfNodes))
+#
+#     links = [[0 for x in range(numberOfNodes)] for y in range(numberOfNodes)]
+#     for q in range(numberOfNodes):
+#         for r in range(numberOfNodes - q):
+#             if weights[q][r] < 200 and q != r:
+#                 links[q][r] = 1
+#                 links[r][q] = 1
 
 
 def init_population():
     global population
     global fitness, k
 
-    # generate population of length 1000
-    for i in range(0, sample_space_size):
-        # print 'hi'
+    # generate initial population
+    for i in range(0, pop_size):
         k = 0
         while k == 0:
             k = 0
@@ -77,31 +88,23 @@ def init_population():
                         k = 1
                     else:
                         temp_population[i][j] = np.random.randint(1, (numberOfNodes + 1))
-                        while temp_population[i][j] == source or links[temp_population[i][j - 1] - 1][
-                                    temp_population[i][j] - 1] == 0:
+                        while temp_population[i][j] == source or links[temp_population[i][j - 1] - 1][temp_population[i][j] - 1] == 0:
                             temp_population[i][j] = np.random.randint(1, (numberOfNodes + 1))
 
                 else:
                     temp_population[i][j] = 0
-                    # print temp_population[i]
 
-    population = temp_population[:]
-    fitness = sample_fitness[:]
-    # for i in range(pop_size):
-    #     print population[i]
-
+    population = temp_population[:pop_size]
+    # print population
     # remove loops
     for i in range(pop_size):
-        temp = 0
-        # print str(i) + " population = " + str(population[i])
         for z in range(0, 5):
             for k in range(length):
                 for l in range(k + 1, length):
                     if population[i][k] == population[i][l]:
                         temp = l
                         for m in range(k + 1, length):
-                            # print 'hi'
-                            if population[i][m] == 0 or temp == length:
+                            if population[i][m] == 0 or temp+1 == length:
                                 break
 
                             temp += 1
@@ -111,46 +114,42 @@ def init_population():
                             population[i][n] = 0
                         break
 
+    # find fitness of initial population
+    for a in range(0, pop_size):
+        sample_fitness[a] = 0
+        j = 0
+        while population[a][j] != destination and j != length-1:
+            temp = population[a][j]
+            temp1 = population[a][j + 1]
+            fitness[a] += weights[temp - 1][temp1 - 1]
+            j += 1
+            del temp
+            del temp1
 
+    # sort fitness according to fitness - ascending
+    for b in range(pop_size):
+        for j in range(pop_size - b - 1):
+            if fitness[j] >= fitness[j+1]:
+                temp = fitness[j]
+                fitness[j] = fitness[j+1]
+                fitness[j+1] = temp
 
-        #find fitness of initial population
-        for i in range(0, pop_size):
-            sample_fitness[i] = 0
-            j = 0
-            while population[i][j] != destination:
-                temp = population[i][j]
-
-                temp1 = population[i][j + 1]
-                fitness[i] += weights[temp - 1][temp1 - 1]
-                j += 1
-                del temp
-                del temp1
-            # print str(i) + ' ' + str(population[i])
-            # print fitness[i]
-
-        for i in range(pop_size):
-            for j in range(pop_size - i - 1):
-                if fitness[j] >= fitness[j+1]:
-                    temp = fitness[j]
-                    fitness[j] = fitness[j+1]
-                    fitness[j+1] = temp
-
-                    temp1 = population[j]
-                    population[j] = population[j+1]
-                    population[j+1] = temp1
-
+                temp1 = population[j]
+                population[j] = population[j+1]
+                population[j+1] = temp1
+    # print population
 
 def allpaths():
     for i in range(allspace):
-        k = 0
-        while k == 0:
-            k = 0
+        c = 0
+        while c == 0:
+            c = 0
             all_paths[i][0] = source
             for j in range(1, length):
-                if k == 0:
+                if c == 0:
                     if links[all_paths[i][j - 1] - 1][destination - 1] == 1:
                         all_paths[i][j] = destination
-                        k = 1
+                        c = 1
                     else:
                         all_paths[i][j] = np.random.randint(1, (numberOfNodes + 1))
                         while all_paths[i][j] == source or links[all_paths[i][j - 1] - 1][all_paths[i][j] - 1] == 0:
@@ -158,19 +157,15 @@ def allpaths():
 
                 else:
                     all_paths[i][j] = 0
-                    # print temp_population[i]
-
 
     # remove loops
     for i in range(allspace):
-        # print str(i) + " population = " + str(population[i])
         for z in range(0, 10):
-            for k in range(length):
-                for l in range(k + 1, length):
-                    if all_paths[i][k] == all_paths[i][l]:
+            for c in range(length):
+                for l in range(c + 1, length):
+                    if all_paths[i][c] == all_paths[i][l]:
                         temp = l
-                        for m in range(k + 1, length - temp):
-                            # print 'hi'
+                        for m in range(c + 1, length - temp):
                             temp += 1
                             all_paths[i][m] = all_paths[i][temp]
                             if all_paths[i][m] == 0:
@@ -180,9 +175,7 @@ def allpaths():
                             all_paths[i][n] = 0
                         break
 
-
-
-    #find fitness of initial population
+    # find fitness of population
     for i in range(allspace):
         allfitness[i] = 0
         j = 0
@@ -210,11 +203,10 @@ def crossover():
     tempfitness = [0 for i in range(pop_size)]
     p = 0
 
-    # print ' in Crossover'
     totalfitness = 0
     for z in range(pop_size):
-        totalfitness += fitness[z]
         tempfitness[z] = 2000 - fitness[z]
+        totalfitness += tempfitness[z]
 
     for a in range(pop_size):
         for b in range(pop_size - a - 1):
@@ -239,7 +231,6 @@ def crossover():
     for d in range(pop_size):
         pointer = 1 / pop_size
         for e in range(pop_size):
-            # pointer = np.random.random_sample(1)
             if sum_sus[e] < pointer < sum_sus[e + 1]:
                 sus_pop[d][:] = population[e][:]
                 break
@@ -255,48 +246,42 @@ def crossover():
             parent2 = np.random.randint(0, pop_size)
             while parent1 == parent2:
                 parent2 = np.random.randint(0, pop_size)
-            # print 'Parent1 -- ' + str(parent1) + ' Parent2 -- ' + str(parent2)
-            # print 'Parent 1 is ' + str(population[parent1])
             i = 0
             j = 0
-            # offspring[l*4] = final_population[parent1]
-            # offspring[l*4+1] = final_population[parent2]
-            # print population[parent1]
             while population[parent1][i] != destination:
                 while population[parent2][j] != destination:
                     if population[parent1][i] == population[parent2][j] and population[parent1][i] != source:
+
                         # do crossover and break with k=1
+
                         temp1 = population[parent1][i:]
                         temp2 = population[parent2][j:]
-                        # print 'temp1 = ' + str(temp1)
-                        # print 'temp2 = ' + str(temp2)
+
                         offspring[p * 2] = population[parent1][0:i] + temp2
                         offspring[p * 2 + 1] = population[parent2][0:j] + temp1
                         p += 1
                         k = 1
-                        # print offspring[p*2]
                         break
 
                     else:
                         j += 1
+
                 if k == 1:
                     break
+
                 i += 1
                 j = 0
-                # print offspring[l]
 
-    # print 'p is ' + str(p)
     for q in range(pop_size):
         offspring[p + q] = population[q]
         offspring_final_length = p + q
-
 
 
 def mutation():
     global pm
     global offspring_final_length
     global source
-    global destination
+    global destination, offspring
 
     for i in range(offspring_final_length):
         brk = 0
@@ -306,11 +291,9 @@ def mutation():
         if mut < pm:
             j = 0
             var = 0
-            # print 'mutation'
             while offspring[i][j] != destination:
                 temp += 1
                 j += 1
-                # print j
             if temp == 2:
                 continue
 
@@ -318,8 +301,7 @@ def mutation():
             value = offspring[i][temp1]
             next1 = offspring[i][temp1 + 1]
             previous = offspring[i][temp1 - 1]
-            # print offspring[i]
-            # print 'value = ' + str(value)+ ' next = ' + str(next1) + ' previous = ' + str(previous)
+
             mut1 = np.random.randint(1, numberOfNodes + 1)
             while links[mut1 - 1][next1 - 1] == 0 or links[mut1 - 1][previous - 1] == 0 or value == mut1 or mut1 == source:
                 mut1 = np.random.randint(1, numberOfNodes + 1)
@@ -332,40 +314,16 @@ def mutation():
 
                 offspring[i][temp1] = mut1
 
-                # remove loops
-                for z in range(0, 5):
-                    for k in range(temp):
-                        for l in range(k + 1, temp):
-                            if offspring[i][k] == offspring[i][l]:
-
-                                temp2 = l
-                                for m in range(k + 1, length):
-                                    # print 'hi'
-                                    if offspring[i][m] == 0 or temp == length:
-                                        break
-
-                                    temp2 += 1
-                                    offspring[i][m] = offspring[i][temp2]
-
-                                for n in range(temp2+1, length):
-                                    # print n
-                                    # if n <= length - 1:
-                                    offspring[i][n] = 0
-                                break
-                                # print offspring[i]
-                                # print '\n'
-
 
 def pop_fitness():
     global offspring_final_length
-    global fitness_with_nodes
     global offspring_fitness
 
     for i in range(offspring_final_length):
         if offspring[i][0] != 0:
             offspring_fitness[i] = 0
             j = 0
-            # print offspring[i]
+
             while offspring[i][j] != destination and j != length-1:
                 temp = offspring[i][j]
                 temp1 = offspring[i][j + 1]
@@ -390,9 +348,9 @@ def selection():
                 temp1 = offspring[j]
                 offspring[j] = offspring[j + 1]
                 offspring[j + 1] = temp1
-                # print offspring[i]
+
+    # select best fit individuals
     for i in range(pop_size):
-        # temp = np.random.randint(0, offspring_final_length)
         population[i] = offspring[i]
         fitness[i] = offspring_fitness[i]
 
@@ -408,31 +366,56 @@ def selection():
                 population[j + 1] = temp1
 
     best_fitness[generations] = fitness[1]
-    # mean_fitness[generations] = np.mean(fitness)
-    # print 'Best is  ' + str(population[1]) + ' -- >  ' + str(fitness[1])
-    # print str(population[2]) + '-- > ' + str(fitness[2])
+    mean_fitness[generations] = np.mean(fitness)
 
 
 def main():
+
+    global generations, source, destination
+
+    # for i in range(runs):
+    # allpaths()
+
     init_population()
-
-    global generations
-
+    generations = 0
     while generations != count:
         crossover()
         mutation()
         pop_fitness()
         selection()
         gen.append(generations)
+        allpathmin[generations] = np.min(allfitness)
         generations += 1
 
-
-    print 'Best Path has fitness = ' + str(np.min(best_fitness))
-    allpaths()
     plt.plot(np.array(gen[:generations]), np.array(best_fitness[:generations]), label='Best Fitness')
-    # plt.plot(np.array(gen[:generations]), np.array(mean_fitness[:generations]),label='Mean Fitness')
-    plt.show()
+    # plt.plot(np.array(gen[:generations]), np.array(allpathmin[:generations]), label='Best Fitness')
+
+    plt.xlabel('Generations')
+        # run.append(i)
+        # minpathrun[i] = np.min(best_fitness)
+        # minpathrunall[i] = np.min(allpathmin)
+        # popinit()
+
+    # plt.plot(np.array(run[:runs]), np.array(minpathrun[:runs]), label='Best Fitness')
+    # plt.plot(np.array(run[:runs]), np.array(minpathrunall[:runs]), label='Best Fitness')
+    #
+    # plt.xlabel('Runs')
+
+    plt.ylabel('Fitness ( Weights )')
+    plt.ylim(0, np.max(best_fitness)+20)
+
+
+    # for i in range(count):
+    #     print 'Gen ' + str(i) + '  ' + str(best_fitness[i])
+    # # plt.plot(np.array(gen[:generations]), np.array(mean_fitness[:generations]), label='Mean Fitness')
+
+    # print 'NON ERROR = ' + str(non_error)
+    # print 'ALL = ' + str(total_run)
+
+    # plt.show()
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    print '--- seconds ---' + str(time.time() - start_time)
